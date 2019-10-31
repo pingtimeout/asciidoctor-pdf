@@ -1,0 +1,39 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+    echo "Usage: $0 <asciidoc-file>"
+    exit 1
+fi
+
+echo "# Downloading all images of $1 locally and then convering the document to PDF."
+echo "# Note that the current script WILL NOT WORK if the document contains image blocks."
+echo "# It can only contain inline images ('image:' instead of 'image::')."
+echo "# All images MUST have an alt-text that does not contain any space."
+echo
+
+rm -rf .images/
+mkdir .images/
+
+input_file=$1
+filename=`echo $input_file | sed s/.adoc//`
+
+echo "# Downloading images to $PWD/.images/"
+asciidoctor -b docbook $input_file -o - | \
+    xmlstarlet select -N docbook=http://docbook.org/ns/docbook --template \
+        -m //docbook:inlinemediaobject \
+        -o "wget --quiet --output-document '.images/" \
+        -v .//docbook:phrase \
+        -o ".png' '" \
+        -v .//docbook:imagedata/@fileref \
+        -o "'" \
+        --nl | \
+    sed 's/&amp;/\&/g' | \
+    parallel -j8
+
+echo "# Generating PDF from local images"
+perl -pe 's|image:[^[ ]+\[([^, ]+),format=png\]|image:.images/$1.png[]|' $input_file |\
+    asciidoctor -b pdf -r asciidoctor-pdf -a data-uri -a allow-uri-read - -o $filename.pdf
+
+echo "# Done"
+
