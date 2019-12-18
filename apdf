@@ -33,7 +33,7 @@ asciidoctor -b docbook $input_file -o - | \
     parallel -j8
 
 echo "# Generating PDF from local images"
-perl -pe 's|image:[^\.][^[ ]+\[([^, ]+),format=png\]|image:.images/$1.png[]|' $input_file |\
+perl -pe 's|image:[^\.][^[ ]+\[([^, ]+),format=png\]|image:.images/$1.png[]|g' $input_file |\
     asciidoctor -b pdf -r asciidoctor-pdf -a data-uri -a allow-uri-read - -o $filename.pdf
 
 echo "# Done"
